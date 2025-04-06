@@ -1,0 +1,638 @@
+<!-- 
+    --- --- --- --- --- --- --- --- READ ME --- --- --- --- --- --- --- ---
+    This is an interactive Twitch chat game developed by NikosiaPhD (on Twitch).
+
+    You will need to edit the settings below before using it.
+
+    Do not distribute this code; refer people to the GitHub repository instead.
+    --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+-->
+
+<script>
+
+    // --- --- --- --- --- --- --- --- SETTINGS --- --- --- --- --- --- --- ---
+    // ONLY EDIT THE LEFT SIDE OF THE EQUATION
+
+    // replace "nikosiaphd" with your twitch channel name
+    const CHANNEL_NAME = "nikosiaphd"
+
+    // messages from these accounts won't spawn boxes
+    const EXCLUDED_CHATTERS = ["soundalerts", "streamelements", "sery_bot", "nightbot"]
+
+    // Adjust how big the boxes are. 1.0 is default, 1.5 is 50% bigger, etc.
+    const BOX_SCALE = 1.5
+
+    // "true" if you want to show the countdown timer, "false" if you don't
+    const SHOW_TIMER = true 
+
+    // How long should the countdown timer be? (in minutes)
+    const TIMER_MINUTES = 11
+
+    // Show hours (the first 00: to the left) in the countdown timer
+    const SHOW_HOURS = true
+
+    // Show milliseconds (the fast .00 to the right) in the countdown timer
+    const SHOW_MILLISECONDS = true
+
+    // "true" if you want the timer to flash every couple of seconds, "false" if you don't
+    const TIMER_FLASHING = true
+
+    // AFTER THIS LINE YOU SHOULD NOT EDIT ANYTHING UNLESS YOU KNOW WHAT YOU'RE DOING
+    // --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
+
+</script>
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>DVD Twitch Messages</title>
+    <style>
+
+        @font-face {
+            font-family: cooper-black;
+            src: url(cooper-black.ttf);
+        }
+
+        html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: #121212;
+            font-family: cooper-black, Lucida Sans, Franklin Gothic Medium,sans-serif;
+        }
+        
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        .message-box {
+            position: absolute;
+            background-color: #12121290;
+            border: 2px solid #4a4a4a;
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            text-align: center;
+            user-select: none;
+            cursor: pointer;
+        }
+
+        .health-bar {
+            width: 100%;
+            height: 5px;
+            background-color: #4a4a4a;
+            margin-bottom: 5px;
+            overflow: hidden;
+        }
+
+        .health-bar-fill {
+            height: 100%;
+            background-color: #4ecdc4;
+            width: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .particle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            opacity: 1;
+        }
+
+        .dvd-username {
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            width: 90%;
+            height: 30%;
+            margin: 0 auto;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .dvd-message {
+            color: #ddd;
+            width: 90%;
+            margin: 0 auto 5px auto;
+            height: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        #timer {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 15vw;
+            color: rgba(255, 255, 255, 0.2);
+            z-index: 0;
+            transition: color 0.1s ease;
+            text-align: center;
+            animation: timerPulse 2s ease-in-out infinite;
+
+        }
+
+        .timer-part {
+            width: 22%;
+            display: inline-block;
+            min-width: 1.1em; /* Fixed width for digits */
+            text-align: center;
+        }
+
+        @keyframes timerPulse {
+            0%, 100% {
+                color: rgba(255, 255, 255, 0.2);
+                transform: scale(1);
+            }
+            42%, 58% {
+                color: rgba(255, 255, 255, 0.21);
+                transform: scale(1);
+            }
+            50% {
+                color: rgba(255, 255, 255, 0.4);
+                transform: scale(1.05);
+            }
+        }
+
+    </style>
+</head>
+<body>
+    <div id="timer"></div>
+    <div id="container"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/textfit@2.4.0/textFit.min.js"></script>
+
+    <script>
+
+        const container = document.getElementById('container');
+        const boxWidth = 150 * BOX_SCALE;
+        const boxHeight = 100 * BOX_SCALE;
+        const MAX_HEALTH = 100;
+
+        class MessageBox {
+            constructor(x, y, username, text, color) {
+                this.username = username;
+                this.color = color;
+
+                this.element = document.createElement('div');
+                this.element.classList.add('message-box');
+                this.element.style.width = `${boxWidth}px`;
+                this.element.style.height = `${boxHeight}px`;
+                this.element.style.borderColor = color;
+                this.element.style.borderWidth = `${BOX_SCALE * 2}px`;
+
+
+                // Create text container
+                this.usernameContainer = document.createElement('div');
+                this.usernameContainer.classList.add("dvd-username")
+                this.usernameContainer.innerText = username;
+
+                // Create text container
+                this.textContainer = document.createElement('div');
+                this.textContainer.classList.add("dvd-message")
+                this.textContainer.style.fontSize = `${BOX_SCALE * 15}px`;
+                
+
+                // Create health bar
+                this.healthBarContainer = document.createElement('div');
+                this.healthBarContainer.classList.add('health-bar');
+                this.healthBarContainer.style.height = `${BOX_SCALE * 5}px`;
+                this.healthBarFill = document.createElement('div');
+                this.healthBarFill.classList.add('health-bar-fill');
+                this.healthBarContainer.appendChild(this.healthBarFill);
+
+               
+
+                this.element.appendChild(this.usernameContainer);
+                this.element.appendChild(this.textContainer);
+                this.element.appendChild(this.healthBarContainer);
+
+
+                this.x = x;
+                this.y = y;
+                this.dx = (Math.random() * 4 - 2);
+                this.dy = (Math.random() * 4 - 2);
+                this.health = MAX_HEALTH;
+
+                this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+                container.appendChild(this.element);
+
+
+                this.updateMessage(text);
+                textFit(this.usernameContainer);
+
+            }
+
+            updateMessage(text) {
+
+                const MAX_CHAR_LEN = 30;
+
+                if (text.length > MAX_CHAR_LEN) {
+                    text = text.substring(0, MAX_CHAR_LEN) + "...";
+                }
+
+                this.textContainer.innerText = text;
+            }
+
+            updateHealthBar() {
+                const healthPercentage = (this.health / MAX_HEALTH) * 100;
+                this.healthBarFill.style.width = `${healthPercentage}%`;
+                
+                // Change color based on health
+                if (healthPercentage > 50) {
+                    this.healthBarFill.style.backgroundColor = '#4ecdc4';
+                } else if (healthPercentage > 25) {
+                    this.healthBarFill.style.backgroundColor = '#ffa726';
+                } else {
+                    this.healthBarFill.style.backgroundColor = '#ff6b6b';
+                }
+            }
+
+            move() {
+                this.x += this.dx;
+                this.y += this.dy;
+
+                // Bouncing off walls
+                // NOTE: for some reason I need to correct the window measurements by 20px
+                if (this.x + boxWidth > window.innerWidth - 20) {
+                    this.x = window.innerWidth - boxWidth - 20;
+                    this.dx *= -1;
+                } else if (this.x < 0) {
+                    this.x = 0;
+                    this.dx *= -1;
+                }
+
+                if (this.y + boxHeight > window.innerHeight - 20) {
+                    this.y = window.innerHeight - boxHeight - 20;
+                    this.dy *= -1;
+                } else if (this.y < 0) {
+                    this.y = 0;
+                    this.dy *= -1;
+                }
+
+                this.element.style.transform = `translate(${this.x}px, ${this.y}px)`;
+            }
+
+            heal() {
+                this.health = Math.min(MAX_HEALTH, this.health + 0.1 * MAX_HEALTH);
+                this.updateHealthBar();
+            }
+
+            takeDamage(damage) {
+                this.health -= damage;
+                this.updateHealthBar();
+                return this.health <= 0;
+            }
+
+            checkCollision(otherBox) {
+                return !(this.x > otherBox.x + boxWidth ||
+                    this.x + boxWidth < otherBox.x ||
+                    this.y > otherBox.y + boxHeight ||
+                    this.y + boxHeight < otherBox.y);
+            }
+
+            explode() {
+                const midX = this.x + boxWidth / 2;
+                const midY = this.y + boxHeight / 2;
+                particleSystems.push(new ParticleSystem(midX, midY, this.color));
+                container.removeChild(this.element);
+                delete messageBoxes[this.username];
+            }
+        }
+
+        class ParticleSystem {
+            constructor(x, y, color) {
+                this.particles = [];
+                this.createParticles(x, y, color);
+            }
+
+            createParticles(x, y, color) {
+
+                const offsetX = Math.random() * 20 - 10;
+                const offsetY = Math.random() * 20 - 10;
+                
+                for (let i = 0; i < 30; i++) {
+                    const particle = document.createElement('div');
+                    particle.classList.add('particle');
+                    particle.style.backgroundColor = color;
+                    
+                    const angle = Math.random() * Math.PI * 2;
+                    const speed = Math.random() * 5 + 1;
+                    
+                    const dx = Math.cos(angle) * speed;
+                    const dy = Math.sin(angle) * speed;
+                    
+                    particle.style.left = `${x + offsetX}px`;
+                    particle.style.top = `${y + offsetY}px`;
+                    
+                    container.appendChild(particle);
+                    
+                    this.particles.push({
+                        element: particle,
+                        x: x + offsetX,
+                        y: y + offsetY,
+                        dx: dx,
+                        dy: dy,
+                        life: 100,
+                        color: color
+                    });
+                }
+            }
+
+            update() {
+                this.particles.forEach((particle, index) => {
+                    particle.x += particle.dx;
+                    particle.y += particle.dy;
+                    particle.life--;
+
+                    // Fade out effect
+                    const opacity = particle.life / 50;
+                    particle.element.style.opacity = opacity;
+                    particle.element.style.transform = `scale(${opacity})`;
+
+                    particle.element.style.left = `${particle.x}px`;
+                    particle.element.style.top = `${particle.y}px`;
+
+                    if (particle.life <= 0) {
+                        container.removeChild(particle.element);
+                        this.particles.splice(index, 1);
+                    }
+                });
+            }
+        }
+
+        const messageBoxes = {
+            // username : boxObject
+        };
+
+        const particleSystems = [];
+
+        function spawnMessageBox(username, message, color) {
+            const x = Math.random() * (window.innerWidth - boxWidth);
+            const y = Math.random() * (window.innerHeight - boxHeight);
+
+            if (messageBoxes[username]) {
+                messageBoxes[username].heal();
+                messageBoxes[username].updateMessage(message);
+            } else {
+                const newBox = new MessageBox(x, y, username, message, color);
+                messageBoxes[username] = newBox;
+            }
+        }
+
+        function gameLoop() {
+            // Update message box positions
+            const usernames = Object.keys(messageBoxes);
+            for (let i = 0; i < usernames.length; i++) {
+                const boxI = messageBoxes[usernames[i]];
+                if (!boxI) continue;
+                boxI.move();
+
+                // Check for collisions
+                for (let j = i + 1; j < usernames.length; j++) {
+                    const boxJ = messageBoxes[usernames[j]];
+
+                    if (!boxJ) continue;
+
+
+                    if (boxI.checkCollision(boxJ)) {
+                        // Calculate damage based on velocity
+                        const damageI = Math.abs(boxJ.dx) + Math.abs(boxJ.dy);
+                        const damageJ = Math.abs(boxI.dx) + Math.abs(boxI.dy);
+
+                        // Swap velocities
+                        const tempDx = boxI.dx;
+                        const tempDy = boxI.dy;
+                        boxI.dx = boxJ.dx;
+                        boxI.dy = boxJ.dy;
+                        boxJ.dx = tempDx;
+                        boxJ.dy = tempDy;
+
+                        const DAMAGE_MULTIPLIER = 10.0
+
+                        // Apply damage
+                        const destroyI = boxI.takeDamage(damageJ * DAMAGE_MULTIPLIER);
+                        const destroyJ = boxJ.takeDamage(damageI * DAMAGE_MULTIPLIER);
+
+                        // Create particle system if box is destroyed
+                        if (destroyI) {
+                            boxI.explode();
+                            break;
+                        }
+
+                        if (destroyJ) {
+                            boxJ.explode();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Update particle systems
+            for (let i = particleSystems.length - 1; i >= 0; i--) {
+                particleSystems[i].update();
+                
+                // Remove empty particle systems
+                if (particleSystems[i].particles.length === 0) {
+                    particleSystems.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        let ws;
+        let reconnectInterval;
+        let reconnectTimeout;
+
+
+        function connectWebSocket() {
+            ws = new WebSocket("wss://irc-ws.chat.twitch.tv:443");
+
+
+            ws.onopen = () => {
+                console.log("Connected to Twitch IRC");
+                ws.send("CAP REQ :twitch.tv/tags"); 
+                ws.send("NICK justinfan12345"); // Anonymous login
+                ws.send(`JOIN #${CHANNEL_NAME}`);
+
+
+                // Clear any existing reconnect interval
+                // if (reconnectInterval) {
+                //     clearInterval(reconnectInterval);
+                // }
+
+            };
+
+            ws.onmessage = (event) => {
+                console.log(event.data);
+                
+                if (event.data.startsWith("PING")) {
+                    ws.send("PONG :" + event.data.split(":")[1]); // Respond to PING to stay connected
+                } else {
+
+                    const tagMatch = event.data.match(/^@(.+?)\s/);
+                    const messageMatch = event.data.match(/PRIVMSG #\w+ :(.+)/);
+            
+                    if (tagMatch && messageMatch) {
+                        const tags = Object.fromEntries(tagMatch[1].split(";").map(tag => tag.split("=")));
+                        const username = tags["display-name"] || "???";
+                        const message = messageMatch[1];
+                        const color = tags["color"] || "#4a4a4a";
+
+                        console.log(username, message)
+
+                        if (EXCLUDED_CHATTERS.includes(username.toLowerCase())) {
+                            return; // Ignore messages from excluded chatters
+                        }
+                        spawnMessageBox(username, message, color);
+                    }
+                }
+            };
+
+            ws.onclose = () => {
+                console.log("Disconnected from Twitch IRC");
+                scheduleReconnect();
+            };
+
+            ws.onerror = (error) => {
+                console.error("WebSocket Error:", error);
+                scheduleReconnect();
+            };
+        }
+
+        function scheduleReconnect() {
+            if (reconnectTimeout) {
+                clearTimeout(reconnectTimeout);
+            }
+            reconnectTimeout = setTimeout(() => {
+                reconnectWebSocket();
+            }, 5000); // Wait 5 seconds before attempting to reconnect
+        }
+
+        function reconnectWebSocket() {
+            if (ws) {
+                ws.close();
+            }
+            connectWebSocket();
+        }
+
+        // Initial connection
+        connectWebSocket();
+
+
+        // These are some initial boxes to start with before messages from chat come in
+        // these three lines can be safely removed
+        spawnMessageBox("NikosiaPhD", "Send a message to spawn a box!", "#ff0000")
+        spawnMessageBox("Panda", "Chatting heals your box!", "#e34102")
+        spawnMessageBox("Joyce", "Thanks Niko, for making this!", "#b00b69")
+
+
+
+        // Start game loop
+        gameLoop();
+
+
+
+        // // // TIMER // // // 
+
+        function formatTime(milliseconds) {
+            const minutes = Math.floor(milliseconds / (60 * 1000));
+            const seconds = Math.floor((milliseconds % (60 * 1000)) / 1000);
+            const ms = Math.floor(milliseconds/10 % 100);
+            return {
+                minutes: String(minutes).padStart(2, '0'),
+                seconds: String(seconds).padStart(2, '0'),
+                ms: String(ms).padStart(2, '0')
+            };
+        }
+
+        function updateTimer() {
+            const timerElement = document.getElementById('timer');
+
+            timerElement.style.animation = TIMER_FLASHING ? 'timerPulse 2s ease-in-out infinite' : 'none';
+
+            timerElement.innerHTML = `
+                ${SHOW_HOURS ? `<span class="timer-part hours">00</span>:` : ''}
+                <span class="timer-part minutes">00</span>:
+                <span class="timer-part seconds">00</span>
+                ${SHOW_MILLISECONDS ? `:<span class="timer-part milliseconds">00</span>` : ''}
+            `;
+            
+            const hoursSpan = timerElement.querySelector('.hours');
+            const minutesSpan = timerElement.querySelector('.minutes');
+            const secondsSpan = timerElement.querySelector('.seconds');
+            const msSpan = timerElement.querySelector('.milliseconds');
+            
+            let currentTime = TIMER_MINUTES * 60 * 1000; // turn minutes into milliseconds
+            let lastSecond = Math.floor(currentTime / 1000);
+
+            const timerInterval = setInterval(() => {
+                if (currentTime <= 0) {
+                    const time = formatTime(0);
+                    if (SHOW_HOURS) hoursSpan.textContent = '00';
+                    minutesSpan.textContent = time.minutes;
+                    secondsSpan.textContent = time.seconds;
+                    if (SHOW_MILLISECONDS) msSpan.textContent = time.ms;
+                    clearInterval(timerInterval);
+                    return;
+                }
+
+                currentTime = Math.max(0, currentTime - 10);
+                const time = formatTime(currentTime);
+                
+                if (SHOW_HOURS) {
+                    const totalMinutes = Math.floor(currentTime / (60 * 1000));
+                    const hours = Math.floor(totalMinutes / 60);
+                    const minutes = totalMinutes % 60;
+                    hoursSpan.textContent = String(hours).padStart(2, '0');
+                    minutesSpan.textContent = String(minutes).padStart(2, '0');
+                } else {
+                    minutesSpan.textContent = time.minutes;
+                }
+
+                secondsSpan.textContent = time.seconds;
+
+                if (SHOW_MILLISECONDS) {
+                    msSpan.textContent = time.ms;
+                }
+            }, 10);
+        }
+
+        // Start the timer immediately
+        if (SHOW_TIMER) {
+            updateTimer();
+        }
+
+    </script>
+</body>
+</html>
