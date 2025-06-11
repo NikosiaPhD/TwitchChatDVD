@@ -5,13 +5,14 @@
     You will need to edit the settings below before using it.
 
     Do not distribute this code; refer people to the GitHub repository instead.
+
     --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
 -->
 
 <script>
 
     // --- --- --- --- --- --- --- --- SETTINGS --- --- --- --- --- --- --- ---
-    // ONLY EDIT THE LEFT SIDE OF THE EQUATION
+    // ONLY EDIT THE RIGHT SIDE OF THE EQUATION
 
     // replace "nikosiaphd" with your twitch channel name
     const CHANNEL_NAME = "nikosiaphd"
@@ -19,23 +20,12 @@
     // messages from these accounts won't spawn boxes
     const EXCLUDED_CHATTERS = ["soundalerts", "streamelements", "sery_bot", "nightbot"]
 
-    // Adjust how big the boxes are. 1.0 is default, 1.5 is 50% bigger, etc.
-    const BOX_SCALE = 1.5
+    // Adjust how big the boxes are. If 1.0 is a bit small, 1.5 makes it 50% bigger, etc.
+    const SCALE = 1.5
 
-    // "true" if you want to show the countdown timer, "false" if you don't
-    const SHOW_TIMER = true 
-
-    // How long should the countdown timer be? (in minutes)
-    const TIMER_MINUTES = 11
-
-    // Show hours (the first 00: to the left) in the countdown timer
-    const SHOW_HOURS = true
-
-    // Show milliseconds (the fast .00 to the right) in the countdown timer
-    const SHOW_MILLISECONDS = true
-
-    // "true" if you want the timer to flash every couple of seconds, "false" if you don't
-    const TIMER_FLASHING = true
+    // change "true" to "false" if you don't want the kill feed or the highscore list to show up
+    const SHOW_KILL_FEED = true
+    const SHOW_HIGHSCORE_LIST = true
 
     // AFTER THIS LINE YOU SHOULD NOT EDIT ANYTHING UNLESS YOU KNOW WHAT YOU'RE DOING
     // --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- --- ---
@@ -94,7 +84,6 @@
             justify-content: space-between;
             text-align: center;
             user-select: none;
-            cursor: pointer;
         }
 
         .health-bar {
@@ -145,48 +134,134 @@
             overflow: hidden;
         }
 
-        #timer {
+        #killfeed {
             position: fixed;
-            width: 100%;
-            height: 100%;
+            top: 20px;
+            left: 20px;
+            /* width: 400px; */
+            text-wrap: none;
+            max-height: 400px;
+            overflow-y: hidden;
+            border-radius: 10px;
+            padding: 10px;
+            color: white;
+
+
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 280px;
+            
+            font-size: 14px;
+
+            .queue-item {
+                /* background-color: #12121290; */
+                /* border: 2px solid #4a4a4a; */
+                border-radius: 8px;
+                padding: 12px 16px;
+                font-weight: 500;
+                color: #e0e0e0;
+                transform: translateY(100%);
+                opacity: 0;
+                transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+                position: relative;
+                overflow: hidden;
+            }
+
+            .queue-item.entering {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            .queue-item.exiting {
+                transform: translateY(-100%);
+                opacity: 0;
+                margin-top: -56px;
+                padding-top: 0;
+                padding-bottom: 0;
+                height: 0;
+                border: none;
+            }
+
+        }
+
+
+        #highscores {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            margin: 20px;
+            min-width: 20vw;
+            min-height: 280px;
+            text-wrap: none;
+            max-height: 400px;
+            /* display: flex;
+            flex-direction: column; */
+            color: white;
+
+        }
+
+            
+        .score-item {
+            /* background: linear-gradient(135deg, #2a2a2a, #1f1f1f);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px; */
+            /* background: #12121290; */
+
+            padding: 12px 16px;
+            font-weight: 500;
+            min-width: 90%;
+            width: 20vw;
+            position: absolute;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
             align-items: center;
-            font-size: 15vw;
-            color: rgba(255, 255, 255, 0.2);
-            z-index: 0;
-            transition: color 0.1s ease;
+            opacity: 0;
+            transform: translateY(100%);
+        }
+
+        .player-name {
+            font-weight: 600;
+        }
+
+        .player-score {
+            font-weight: 700;
+            /* min-width: 60px; */
+            text-align: right;
+        }
+
+        .score-item.visible {
+            opacity: 1;
+        }
+
+        .score-item.entering {
+            transform: translateY(0);
+        }
+
+        .score-item.exiting {
+            opacity: 0;
+            transform: translateY(-100%);
+        }
+
+        footer {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #e0e0e077;
+            font-size: calc(12px * var(--scale, 1.5));
             text-align: center;
-            animation: timerPulse 2s ease-in-out infinite;
-
+            z-index: 1000;
         }
 
-        .timer-part {
-            width: 22%;
-            display: inline-block;
-            min-width: 1.1em; /* Fixed width for digits */
-            text-align: center;
-        }
-
-        @keyframes timerPulse {
-            0%, 100% {
-                color: rgba(255, 255, 255, 0.2);
-                transform: scale(1);
-            }
-            42%, 58% {
-                color: rgba(255, 255, 255, 0.21);
-                transform: scale(1);
-            }
-            50% {
-                color: rgba(255, 255, 255, 0.4);
-                transform: scale(1.05);
-            }
-        }
-
+            
     </style>
 </head>
 <body>
-    <div id="timer"></div>
+    <div id="killfeed"></div>
+    <div id="highscores"></div>
     <div id="container"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/textfit@2.4.0/textFit.min.js"></script>
@@ -194,8 +269,8 @@
     <script>
 
         const container = document.getElementById('container');
-        const boxWidth = 150 * BOX_SCALE;
-        const boxHeight = 100 * BOX_SCALE;
+        const boxWidth = 150 * SCALE;
+        const boxHeight = 100 * SCALE;
         const MAX_HEALTH = 100;
 
         class MessageBox {
@@ -208,7 +283,7 @@
                 this.element.style.width = `${boxWidth}px`;
                 this.element.style.height = `${boxHeight}px`;
                 this.element.style.borderColor = color;
-                this.element.style.borderWidth = `${BOX_SCALE * 2}px`;
+                this.element.style.borderWidth = `${SCALE * 2}px`;
 
 
                 // Create text container
@@ -219,13 +294,13 @@
                 // Create text container
                 this.textContainer = document.createElement('div');
                 this.textContainer.classList.add("dvd-message")
-                this.textContainer.style.fontSize = `${BOX_SCALE * 15}px`;
+                this.textContainer.style.fontSize = `${SCALE * 15}px`;
                 
 
                 // Create health bar
                 this.healthBarContainer = document.createElement('div');
                 this.healthBarContainer.classList.add('health-bar');
-                this.healthBarContainer.style.height = `${BOX_SCALE * 5}px`;
+                this.healthBarContainer.style.height = `${SCALE * 5}px`;
                 this.healthBarFill = document.createElement('div');
                 this.healthBarFill.classList.add('health-bar-fill');
                 this.healthBarContainer.appendChild(this.healthBarFill);
@@ -396,7 +471,7 @@
 
         const particleSystems = [];
 
-        function spawnMessageBox(username, message, color) {
+        function onTwitchMessage(username, message, color) {
             const x = Math.random() * (window.innerWidth - boxWidth);
             const y = Math.random() * (window.innerHeight - boxHeight);
 
@@ -446,11 +521,15 @@
                         // Create particle system if box is destroyed
                         if (destroyI) {
                             boxI.explode();
+                            addKillfeedEntry(boxJ.username, boxJ.color, boxI.username, boxI.color);
+                            highscores.addOrUpdatePlayer(boxJ.username, 1);
                             break;
                         }
 
                         if (destroyJ) {
                             boxJ.explode();
+                            addKillfeedEntry(boxI.username, boxI.color, boxJ.username, boxJ.color);
+                            highscores.addOrUpdatePlayer(boxI.username, 1);
                             break;
                         }
                     }
@@ -469,6 +548,21 @@
 
             requestAnimationFrame(gameLoop);
         }
+
+        // These are some initial boxes to start with before messages from chat come in
+        // these three lines can be safely removed
+        onTwitchMessage("NikosiaPhD", "Check out my website for more!", "#ff0000")
+        onTwitchMessage("Panda", "Chatting heals your box!", "#e34102")
+        onTwitchMessage("Joyce", "Send a message to spawn a box!", "#b00b69")
+
+
+
+        // Start game loop
+        gameLoop();
+
+    </script>
+
+    <script> // # # # Twitch Chat Integration # # #
 
         let ws;
         let reconnectInterval;
@@ -494,7 +588,7 @@
             };
 
             ws.onmessage = (event) => {
-                console.log(event.data);
+                // console.log(event.data);
                 
                 if (event.data.startsWith("PING")) {
                     ws.send("PONG :" + event.data.split(":")[1]); // Respond to PING to stay connected
@@ -514,7 +608,7 @@
                         if (EXCLUDED_CHATTERS.includes(username.toLowerCase())) {
                             return; // Ignore messages from excluded chatters
                         }
-                        spawnMessageBox(username, message, color);
+                        onTwitchMessage(username, message, color);
                     }
                 }
             };
@@ -550,89 +644,208 @@
         connectWebSocket();
 
 
-        // These are some initial boxes to start with before messages from chat come in
-        // these three lines can be safely removed
-        spawnMessageBox("NikosiaPhD", "Send a message to spawn a box!", "#ff0000")
-        spawnMessageBox("Panda", "Chatting heals your box!", "#e34102")
-        spawnMessageBox("Joyce", "Thanks Niko, for making this!", "#b00b69")
+    // END # # # Twitch Chat Integration # # #
+    </script> 
 
 
+    <script> // # # # Kill Feed Queue # # #
+        class Queue {
+            constructor(containerId, maxSize = 5) {
+                this.container = document.getElementById(containerId);
+                this.maxSize = maxSize;
+                this.items = [];
+                this.animationDuration = 400;
+            }
 
-        // Start game loop
-        gameLoop();
-
-
-
-        // // // TIMER // // // 
-
-        function formatTime(milliseconds) {
-            const minutes = Math.floor(milliseconds / (60 * 1000));
-            const seconds = Math.floor((milliseconds % (60 * 1000)) / 1000);
-            const ms = Math.floor(milliseconds/10 % 100);
-            return {
-                minutes: String(minutes).padStart(2, '0'),
-                seconds: String(seconds).padStart(2, '0'),
-                ms: String(ms).padStart(2, '0')
-            };
-        }
-
-        function updateTimer() {
-            const timerElement = document.getElementById('timer');
-
-            timerElement.style.animation = TIMER_FLASHING ? 'timerPulse 2s ease-in-out infinite' : 'none';
-
-            timerElement.innerHTML = `
-                ${SHOW_HOURS ? `<span class="timer-part hours">00</span>:` : ''}
-                <span class="timer-part minutes">00</span>:
-                <span class="timer-part seconds">00</span>
-                ${SHOW_MILLISECONDS ? `:<span class="timer-part milliseconds">00</span>` : ''}
-            `;
-            
-            const hoursSpan = timerElement.querySelector('.hours');
-            const minutesSpan = timerElement.querySelector('.minutes');
-            const secondsSpan = timerElement.querySelector('.seconds');
-            const msSpan = timerElement.querySelector('.milliseconds');
-            
-            let currentTime = TIMER_MINUTES * 60 * 1000; // turn minutes into milliseconds
-            let lastSecond = Math.floor(currentTime / 1000);
-
-            const timerInterval = setInterval(() => {
-                if (currentTime <= 0) {
-                    const time = formatTime(0);
-                    if (SHOW_HOURS) hoursSpan.textContent = '00';
-                    minutesSpan.textContent = time.minutes;
-                    secondsSpan.textContent = time.seconds;
-                    if (SHOW_MILLISECONDS) msSpan.textContent = time.ms;
-                    clearInterval(timerInterval);
-                    return;
-                }
-
-                currentTime = Math.max(0, currentTime - 10);
-                const time = formatTime(currentTime);
+            addItem(content) {
+                // Create new item element
+                const item = document.createElement('div');
+                item.className = 'queue-item';
+                item.innerHTML = content;
                 
-                if (SHOW_HOURS) {
-                    const totalMinutes = Math.floor(currentTime / (60 * 1000));
-                    const hours = Math.floor(totalMinutes / 60);
-                    const minutes = totalMinutes % 60;
-                    hoursSpan.textContent = String(hours).padStart(2, '0');
-                    minutesSpan.textContent = String(minutes).padStart(2, '0');
-                } else {
-                    minutesSpan.textContent = time.minutes;
+                // Add to container
+                this.container.appendChild(item);
+                this.items.push(item);
+                
+                // Trigger entrance animation
+                setTimeout(() => {
+                    item.classList.add('entering');
+                }, 10);
+                
+                // Remove oldest item if queue is full
+                if (this.items.length > this.maxSize) {
+                    this.removeOldestItem();
                 }
+            }
 
-                secondsSpan.textContent = time.seconds;
+            removeOldestItem() {
+                if (this.items.length === 0) return;
+                
+                const oldestItem = this.items.shift();
+                oldestItem.classList.add('exiting');
+                
+                // Remove from DOM after animation
+                setTimeout(() => {
+                    if (oldestItem.parentNode) {
+                        oldestItem.parentNode.removeChild(oldestItem);
+                    }
+                }, this.animationDuration/2);
+            }
 
-                if (SHOW_MILLISECONDS) {
-                    msSpan.textContent = time.ms;
-                }
-            }, 10);
+            clear() {
+                this.items.forEach(item => {
+                    item.classList.add('exiting');
+                    setTimeout(() => {
+                        if (item.parentNode) {
+                            item.parentNode.removeChild(item);
+                        }
+                    }, this.animationDuration);
+                });
+                this.items = [];
+            }
         }
 
-        // Start the timer immediately
-        if (SHOW_TIMER) {
-            updateTimer();
+        // Initialize queue
+        const killFeed = new Queue('killfeed', 5);
+
+        document.getElementById('killfeed').style.fontSize = `${SCALE * 14}px`;
+
+        const killVerbs = [
+            "destroyed", "smashed", "obliterated", "shattered", "crushed",
+            "demolished", "wrecked"
+        ];
+
+        function addKillfeedEntry(username1, color1, username2, color2) {
+
+            if (!SHOW_KILL_FEED) {
+                return; // If kill feed is disabled, do nothing
+            }
+
+            if (username1.length > 15) username1 = username1.substring(0, 12) + "...";
+            if (username2.length > 15) username2 = username2.substring(0, 12) + "...";
+
+            const randomVerb = killVerbs[Math.floor(Math.random() * killVerbs.length)];
+            const entry = `<span style="color: ${color1}">${username1}</span> ${randomVerb} <span style="color: ${color2}">${username2}</span>`;
+            killFeed.addItem(entry);
         }
 
     </script>
+
+
+    <script> // # # # Highscore List # # #
+        class HighscoreList {
+            constructor(containerId, displayCount = 5) {
+                this.container = document.getElementById(containerId);
+                this.displayCount = displayCount;
+                this.players = new Map(); // name -> score
+                this.displayedElements = new Map(); // name -> DOM element
+                this.animationDuration = 500;
+                this.itemHeight = 56; // height of each item including margin
+            }
+
+            addOrUpdatePlayer(name, points) {
+
+                if (!SHOW_HIGHSCORE_LIST) {
+                    return; // If highscore list is disabled, do nothing
+                }
+
+                const currentScore = this.players.get(name) || 0;
+                this.players.set(name, currentScore + points);
+                this.updateDisplay();
+            }
+
+            updateDisplay() {
+                // Get sorted top players
+                const sortedPlayers = Array.from(this.players.entries())
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, this.displayCount);
+
+                console.log("Sorted players:", sortedPlayers);
+
+                // Track which players should be displayed
+                const shouldDisplay = new Set(sortedPlayers.map(([name]) => name));
+                
+                // Remove players that are no longer in top 5
+                for (const [name, element] of this.displayedElements.entries()) {
+                    if (!shouldDisplay.has(name)) {
+                        this.removePlayer(name, element);
+                    }
+                }
+
+                // Update positions and add new players
+                sortedPlayers.forEach(([name, score], index) => {
+                    let element = this.displayedElements.get(name);
+                    
+                    if (!element) {
+                        element = this.createElement(name, score, index);
+                        this.displayedElements.set(name, element);
+                        this.container.appendChild(element);
+                        
+                        // Trigger entrance animation
+                        setTimeout(() => {
+                            element.classList.add('visible', 'entering');
+                        }, 50);
+                    } else {
+                        // Update existing element
+                        const scoreElement = element.querySelector('.player-score').textContent = score;
+
+                    }
+                    
+                    // Animate to new position
+                    this.animateToPosition(element, index);
+                });
+            }
+
+            createElement(name, score) {
+
+                if (name.length > 15) name = name.substring(0, 12) + "...";
+
+                const element = document.createElement('div');
+                element.className = 'score-item';
+                element.innerHTML = `
+                    <div class="player-name">${name}</div>
+                    <div class="player-score">${score}</div>
+                `;
+                return element;
+            }
+
+
+            animateToPosition(element, index) {
+                const targetY = index * this.itemHeight;
+                element.style.transform = `translateY(${targetY}px)`;
+            }
+
+            removePlayer(name, element) {
+                this.displayedElements.delete(name);
+                element.classList.add('exiting');
+                
+                setTimeout(() => {
+                    if (element.parentNode) {
+                        element.parentNode.removeChild(element);
+                    }
+                }, this.animationDuration);
+            }
+
+            clear() {
+                this.players.clear();
+                for (const [name, element] of this.displayedElements.entries()) {
+                    this.removePlayer(name, element);
+                }
+            }
+        }
+
+        // Initialize highscore list
+        const highscores = new HighscoreList('highscores', 5);
+
+        document.getElementById('highscores').style.fontSize = `${SCALE * 14}px`;
+
+
+        const footer = document.createElement('footer');
+        footer.textContent = 'Made by NikosiaPhD on Twitch';
+        document.body.appendChild(footer);
+
+    </script>
+
+
 </body>
 </html>
